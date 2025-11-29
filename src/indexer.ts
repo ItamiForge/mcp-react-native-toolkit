@@ -599,7 +599,7 @@ export class Indexer {
 
             // Search the vector store
             const filter = library || version ? { library, version } : undefined;
-            const results = await this.vectorStore.search(queryEmbedding, topK, filter);
+            const results = await this.vectorStore.search(queryEmbedding, query, topK, filter);
 
             return results;
         } catch (error) {

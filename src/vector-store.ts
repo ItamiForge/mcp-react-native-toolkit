@@ -146,12 +146,14 @@ export class VectorStore {
     /**
      * Searches for similar embeddings
      * @param queryEmbedding - The query embedding vector
+     * @param query - The original query text (for hybrid search)
      * @param topK - Number of results to return
      * @param filter - Optional metadata filter (library, version)
      * @returns Array of semantic search results
      */
     async search(
         queryEmbedding: number[],
+        query: string,
         topK: number = 10,
         filter?: { library?: string; version?: string }
     ): Promise<SemanticSearchResult[]> {
@@ -162,7 +164,7 @@ export class VectorStore {
         }
 
         try {
-            const results = await this.index.queryItems(queryEmbedding, topK * 2); // Get more results for filtering
+            const results = await this.index.queryItems(queryEmbedding, query, topK * 2); // Get more results for filtering
 
             // Filter and map results
             const filteredResults = results
