@@ -37,7 +37,11 @@ export class ContextDetector {
                     reactNative: dependencies['react-native'] || devDependencies['react-native'],
                     expo: dependencies['expo'] || devDependencies['expo'],
                     reactNavigation: dependencies['@react-navigation/native'] || dependencies['react-navigation'],
-                    ignite: igniteDetected ? (devDependencies['ignite-cli'] || 'detected') : undefined
+                    ignite: igniteDetected ? (devDependencies['ignite-cli'] || 'detected') : undefined,
+                    reanimated: dependencies['react-native-reanimated'] || devDependencies['react-native-reanimated'],
+                    gestureHandler: dependencies['react-native-gesture-handler'] || devDependencies['react-native-gesture-handler'],
+                    mmkv: dependencies['react-native-mmkv'] || devDependencies['react-native-mmkv'],
+                    skia: dependencies['@shopify/react-native-skia'] || devDependencies['@shopify/react-native-skia']
                 }
             };
         } catch (error) {

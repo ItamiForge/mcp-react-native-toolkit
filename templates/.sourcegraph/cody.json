@@ -1,0 +1,19 @@
+{
+  "version": "1",
+  "customInstructions": "Always detect project context before suggesting code (check package.json for versions)\nVerify APIs exist for the detected React Native/Expo version before suggesting\nUse TypeScript with proper type annotations unless the project uses JavaScript\nFollow React Native performance best practices (memo, useCallback, FlatList optimization)\nPrefer functional components with hooks over class components\nHandle platform differences when necessary using Platform.OS or platform-specific files\nUse FlatList/SectionList for long lists, never ScrollView with many items\nImplement proper loading states and error handling\nUse React.memo() for pure components that render often\nAvoid inline functions in render for frequently re-rendering components\nUse StyleSheet.create() instead of inline styles for performance\nHandle keyboard avoiding behavior for forms\nTest on both iOS and Android platforms\nUse proper accessibility labels and hints",
+  "context": {
+    "include": [
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.js",
+      "**/*.jsx"
+    ],
+    "exclude": [
+      "node_modules/**",
+      ".git/**",
+      "android/**",
+      "ios/**"
+    ]
+  },
+  "projectContext": "React Native/Expo Mobile Development Project\n\nThis project uses React Native and/or Expo for cross-platform mobile development. Follow these guidelines to provide accurate and helpful assistance."
+}

@@ -35,6 +35,8 @@ export interface DocSource {
     sparseCheckoutPaths?: string[];
     excludePaths?: string[];
     preprocessingRules?: PreprocessingRules;
+    /** Whether this source is enabled (defaults to true) */
+    enabled?: boolean;
 }
 
 export interface PreprocessingRules {
@@ -50,6 +52,10 @@ export interface Settings {
     preprocessMarkdown: boolean;
     chunkSizeTokens: number;
     cacheEnabled: boolean;
+    semanticSearchEnabled: boolean;
+    embeddingModel: string;
+    vectorIndexPath: string;
+    embeddingBatchSize: number;
 }
 
 export interface Config {
@@ -91,6 +97,55 @@ export interface DocIndex {
     symbols: Map<string, SymbolIndexEntry[]>; // key: symbol name
     examples: Map<string, CodeExample[]>; // key: topic
     topics: Map<string, string[]>; // key: library/version, value: list of topics
+    embeddings: Map<string, ChunkEmbedding>; // key: chunkId
+}
+
+// ============================================
+// Semantic Search Types
+// ============================================
+
+/** 384-dimensional embedding vector */
+export type EmbeddingVector = number[];
+
+export interface ChunkEmbedding {
+    chunkId: string;
+    library: string;
+    version: string;
+    topic: string;
+    content: string;
+    embedding: EmbeddingVector;
+    metadata: {
+        headings: string[];
+        codeBlocks: number;
+        estimatedTokens: number;
+    };
+}
+
+export interface SemanticSearchResult {
+    chunkId: string;
+    library: string;
+    version: string;
+    topic: string;
+    content: string;
+    score: number; // similarity score 0-1
+    metadata: {
+        headings: string[];
+        codeBlocks: number;
+        estimatedTokens: number;
+    };
+}
+
+export interface HybridSearchResult extends SemanticSearchResult {
+    keywordScore: number;
+    semanticScore: number;
+    combinedScore: number;
+    matchType: 'keyword' | 'semantic' | 'hybrid';
+}
+
+/** Result from symbol search with score */
+export interface SymbolSearchResult {
+    entry: SymbolIndexEntry;
+    score: number;
 }
 
 // ============================================
@@ -105,6 +160,10 @@ export interface ProjectContext {
         expo?: string;
         ignite?: string;
         reactNavigation?: string;
+        reanimated?: string;
+        gestureHandler?: string;
+        mmkv?: string;
+        skia?: string;
     };
 }
 
@@ -150,4 +209,125 @@ export interface BestPractice {
     title: string;
     description: string;
     link: string;
+}
+
+// ============================================
+// Scaffold Types
+// ============================================
+
+/** Category for organizing scaffold templates */
+export type ScaffoldCategory = 'list' | 'navigation' | 'form' | 'api' | 'storage' | 'animation' | 'image' | 'other';
+
+/** Scaffold template definition */
+export interface ComponentScaffold {
+    /** Unique identifier (e.g., 'flatlist-basic') */
+    id: string;
+    /** Display name */
+    name: string;
+    /** Description of what the scaffold does */
+    description: string;
+    /** Target library */
+    library: 'react-native' | 'expo' | 'react-navigation' | 'ignite' | 'react-native-reanimated' | 'react-native-gesture-handler' | 'react-native-mmkv' | 'react-native-skia';
+    /** Scaffold category */
+    category: ScaffoldCategory;
+    /** Template language */
+    language: 'typescript' | 'javascript';
+    /** Template code with placeholders */
+    code: string;
+    /** Required npm dependencies */
+    dependencies: string[];
+    /** Import statements */
+    imports: string[];
+    /** Usage notes and instructions */
+    notes: string[];
+}
+
+/** Options for generating a scaffold */
+export interface ScaffoldGenerationOptions {
+    /** ID of the scaffold template */
+    scaffoldId: string;
+    /** Target language */
+    language: 'typescript' | 'javascript';
+    /** Include explanatory comments */
+    includeComments: boolean;
+    /** Include TypeScript types (for TS) */
+    includeTypes: boolean;
+    /** Styling approach */
+    styleApproach: 'stylesheet' | 'inline' | 'styled-components';
+    /** Custom variable substitutions */
+    customizations?: Record<string, string>;
+}
+
+// ============================================
+// Version Comparison Types
+// ============================================
+
+/** Represents a modified API between versions */
+export interface ModifiedAPI {
+    symbol: string;
+    fromSignature?: string;
+    toSignature?: string;
+    changes: string;
+}
+
+/** Represents differences between two library versions */
+export interface VersionDiff {
+    library: string;
+    fromVersion: string;
+    toVersion: string;
+    /** APIs added in the new version */
+    added: SymbolIndexEntry[];
+    /** APIs removed in the new version */
+    removed: SymbolIndexEntry[];
+    /** APIs with signature changes */
+    modified: ModifiedAPI[];
+    /** Count of unchanged APIs */
+    unchanged: number;
+}
+
+// ============================================
+// Migration Types
+// ============================================
+
+/** Individual migration step */
+export interface MigrationStep {
+    /** Step order/number */
+    order: number;
+    /** Step title */
+    title: string;
+    /** Detailed description */
+    description: string;
+    /** Optional before/after code example */
+    codeExample?: {
+        before?: string;
+        after?: string;
+        language: string;
+    };
+    /** Whether this step can be automated */
+    automated: boolean;
+    /** Whether this is a breaking change */
+    breaking: boolean;
+    /** Reference documentation links */
+    references: string[];
+}
+
+/** Complete migration guide between versions */
+export interface MigrationPath {
+    library: string;
+    fromVersion: string;
+    toVersion: string;
+    /** Migration difficulty level */
+    difficulty: 'easy' | 'moderate' | 'complex';
+    /** Estimated time in minutes */
+    estimatedTime: number;
+    /** Ordered migration steps */
+    steps: MigrationStep[];
+    /** Summary of breaking changes */
+    breakingChanges: string[];
+    /** List of deprecated APIs */
+    deprecations: string[];
+    /** New features available */
+    newFeatures: string[];
+    /** Helpful resource links */
+    resources: string[];
 }

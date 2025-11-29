@@ -8,6 +8,7 @@
             "branch": "main",
             "versionStrategy": "none",
             "description": "Official React Native documentation",
+            "enabled": true,
             "preprocessingRules": {
                 "stripComments": true,
                 "removeNavigation": true,
@@ -23,6 +24,7 @@
             "versionStrategy": "sdk-branch",
             "versionBranchPattern": "sdk-{major}",
             "description": "Official Expo SDK documentation",
+            "enabled": true,
             "preprocessingRules": {
                 "stripComments": true,
                 "removeNavigation": true,
@@ -37,6 +39,7 @@
             "branch": "main",
             "versionStrategy": "versioned-folder",
             "description": "React Navigation routing and navigation library",
+            "enabled": false,
             "preprocessingRules": {
                 "stripComments": true,
                 "removeNavigation": true,
@@ -51,6 +54,67 @@
             "branch": "master",
             "versionStrategy": "none",
             "description": "Ignite CLI boilerplate for React Native",
+            "enabled": false,
+            "preprocessingRules": {
+                "stripComments": true,
+                "removeNavigation": true,
+                "minifyWhitespace": true
+            }
+        },
+        {
+            "id": "react-native-reanimated",
+            "name": "React Native Reanimated",
+            "repo": "https://github.com/software-mansion/react-native-reanimated.git",
+            "docsPath": "packages/docs-reanimated/docs",
+            "branch": "main",
+            "versionStrategy": "none",
+            "description": "React Native Reanimated animation library",
+            "enabled": false,
+            "preprocessingRules": {
+                "stripComments": true,
+                "removeNavigation": true,
+                "minifyWhitespace": true
+            }
+        },
+        {
+            "id": "react-native-gesture-handler",
+            "name": "React Native Gesture Handler",
+            "repo": "https://github.com/software-mansion/react-native-gesture-handler.git",
+            "docsPath": "docs/docs",
+            "branch": "main",
+            "versionStrategy": "none",
+            "description": "Declarative gesture handling for React Native",
+            "enabled": false,
+            "preprocessingRules": {
+                "stripComments": true,
+                "removeNavigation": true,
+                "minifyWhitespace": true
+            }
+        },
+        {
+            "id": "react-native-mmkv",
+            "name": "React Native MMKV",
+            "repo": "https://github.com/mrousavy/react-native-mmkv.git",
+            "docsPath": "docs/docs",
+            "branch": "main",
+            "versionStrategy": "none",
+            "description": "Ultra-fast key-value storage for React Native",
+            "enabled": false,
+            "preprocessingRules": {
+                "stripComments": true,
+                "removeNavigation": true,
+                "minifyWhitespace": true
+            }
+        },
+        {
+            "id": "react-native-skia",
+            "name": "React Native Skia",
+            "repo": "https://github.com/Shopify/react-native-skia.git",
+            "docsPath": "docs/docs",
+            "branch": "main",
+            "versionStrategy": "none",
+            "description": "High-performance 2D graphics powered by Skia",
+            "enabled": false,
             "preprocessingRules": {
                 "stripComments": true,
                 "removeNavigation": true,
@@ -64,6 +128,10 @@
         "cleanupTempDocs": true,
         "preprocessMarkdown": true,
         "chunkSizeTokens": 2000,
-        "cacheEnabled": true
+        "cacheEnabled": true,
+        "semanticSearchEnabled": true,
+        "embeddingModel": "Xenova/all-MiniLM-L6-v2",
+        "vectorIndexPath": "./docs/.vector-index",
+        "embeddingBatchSize": 32
     }
 }

@@ -1,0 +1,132 @@
+React Native/Expo Mobile Development Project
+
+This project uses React Native and/or Expo for cross-platform mobile development. Follow these guidelines to provide accurate and helpful assistance.
+
+=== CORE RULES ===
+
+1. Always detect project context before suggesting code (check package.json for versions)
+2. Verify APIs exist for the detected React Native/Expo version before suggesting
+3. Use TypeScript with proper type annotations unless the project uses JavaScript
+4. Follow React Native performance best practices (memo, useCallback, FlatList optimization)
+5. Prefer functional components with hooks over class components
+6. Handle platform differences when necessary using Platform.OS or platform-specific files
+
+=== API VALIDATION ===
+
+1. Check React Native version before using new APIs (e.g., useWindowDimensions requires RN 0.61+)
+2. Check Expo SDK version for Expo-specific APIs
+3. Verify third-party library versions (React Navigation, Reanimated, Gesture Handler, etc.)
+4. Use optional chaining and nullish coalescing for safer code
+5. Import from correct packages (react-native vs expo-* vs @react-navigation/*)
+
+=== BEST PRACTICES ===
+
+1. Use FlatList/SectionList for long lists, never ScrollView with many items
+2. Implement proper loading states and error handling
+3. Use React.memo() for pure components that render often
+4. Avoid inline functions in render for frequently re-rendering components
+5. Use StyleSheet.create() instead of inline styles for performance
+6. Handle keyboard avoiding behavior for forms
+7. Test on both iOS and Android platforms
+8. Use proper accessibility labels and hints
+
+=== NAVIGATION ===
+
+1. Use React Navigation for routing (@react-navigation/native)
+2. Properly type navigation props with TypeScript
+3. Use navigation.navigate() with proper screen names
+4. Handle deep linking when required
+5. Configure proper header options for screens
+
+=== STATE MANAGEMENT ===
+
+1. Use React Context for simple state sharing
+2. Consider Zustand, Jotai, or Redux Toolkit for complex state
+3. Use React Query or SWR for server state
+4. Persist state with MMKV or AsyncStorage as appropriate
+5. Avoid prop drilling more than 2-3 levels deep
+
+=== CODE EXAMPLES ===
+
+--- Optimized FlatList ---
+
+// Optimized FlatList with proper performance settings
+import React, { memo, useCallback } from 'react';
+import { FlatList, Text, View, StyleSheet } from 'react-native';
+
+interface Item {
+  id: string;
+  title: string;
+}
+
+interface ItemProps {
+  item: Item;
+}
+
+const ListItem = memo(({ item }: ItemProps) => (
+  <View style={styles.item}>
+    <Text>{item.title}</Text>
+  </View>
+));
+
+export function OptimizedList({ data }: { data: Item[] }) {
+  const renderItem = useCallback(
+    ({ item }: { item: Item }) => <ListItem item={item} />,
+    []
+  );
+
+  const keyExtractor = useCallback((item: Item) => item.id, []);
+
+  return (
+    <FlatList
+      data={data}
+      renderItem={renderItem}
+      keyExtractor={keyExtractor}
+      removeClippedSubviews={true}
+      maxToRenderPerBatch={10}
+      windowSize={5}
+      initialNumToRender={10}
+      getItemLayout={(_, index) => ({
+        length: 50,
+        offset: 50 * index,
+        index,
+      })}
+    />
+  );
+}
+
+const styles = StyleSheet.create({
+  item: { height: 50, padding: 10 },
+});
+
+--- Navigation Setup ---
+
+// Type-safe React Navigation setup
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+
+// Define the param list for type safety
+type RootStackParamList = {
+  Home: undefined;
+  Details: { itemId: string };
+  Profile: { userId: string };
+};
+
+// Export typed navigation props
+export type RootStackScreenProps<T extends keyof RootStackParamList> =
+  NativeStackScreenProps<RootStackParamList, T>;
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
+
+export function Navigation() {
+  return (
+    <NavigationContainer>
+      <Stack.Navigator initialRouteName="Home">
+        <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen name="Details" component={DetailsScreen} />
+        <Stack.Screen name="Profile" component={ProfileScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}

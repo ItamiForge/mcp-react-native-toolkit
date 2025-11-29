@@ -1,0 +1,11 @@
+{
+  "assistant": {
+    "version": "2",
+    "default_model": {
+      "provider": "copilot_chat",
+      "model": "gpt-4o"
+    },
+    "custom_instructions": "Always detect project context before suggesting code (check package.json for versions)\nVerify APIs exist for the detected React Native/Expo version before suggesting\nUse TypeScript with proper type annotations unless the project uses JavaScript\nFollow React Native performance best practices (memo, useCallback, FlatList optimization)\nPrefer functional components with hooks over class components\nHandle platform differences when necessary using Platform.OS or platform-specific files"
+  },
+  "projectContext": "React Native/Expo Mobile Development Project\n\nThis project uses React Native and/or Expo for cross-platform mobile development. Follow these guidelines to provide accurate and helpful assistance."
+}

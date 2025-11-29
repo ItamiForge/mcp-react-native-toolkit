@@ -5,7 +5,8 @@
     "type": "module",
     "main": "dist/index.js",
     "bin": {
-        "mcp-rn-init": "./bin/mcp-rn-init"
+        "mcp-rn-init": "./bin/mcp-rn-init.js",
+        "mcp-react-native-toolkit": "./dist/index.js"
     },
     "scripts": {
         "build": "tsc",
@@ -16,7 +17,7 @@
         "fetch-docs": "tsx scripts/fetch-docs.ts",
         "optimize-docs": "tsx scripts/optimize-docs.ts",
         "refresh-docs": "npm run fetch-docs && npm run optimize-docs",
-        "setup": "./setup.sh"
+        "generate-templates": "tsx scripts/generate-templates.ts"
     },
     "keywords": [
         "mcp",
@@ -44,9 +45,11 @@
         "node": ">=18.0.0"
     },
     "dependencies": {
+        "@huggingface/transformers": "^3.5.1",
         "@modelcontextprotocol/sdk": "^0.6.0",
         "semver": "^7.5.4",
         "tar": "^7.5.2",
+        "vectra": "^0.9.0",
         "zod": "^3.22.4"
     },
     "devDependencies": {

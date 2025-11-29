@@ -1,0 +1,10 @@
+{
+  "version": "1.0",
+  "customInstructions": "Always detect project context before suggesting code (check package.json for versions). Verify APIs exist for the detected React Native/Expo version before suggesting. Use TypeScript with proper type annotations unless the project uses JavaScript. Follow React Native performance best practices (memo, useCallback, FlatList optimization). Prefer functional components with hooks over class components. Handle platform differences when necessary using Platform.OS or platform-specific files",
+  "codeStyle": {
+    "preferTypeScript": true,
+    "useFunctionalComponents": true,
+    "useHooks": true
+  },
+  "projectContext": "React Native/Expo Mobile Development Project\n\nThis project uses React Native and/or Expo for cross-platform mobile development. Follow these guidelines to provide accurate and helpful assistance."
+}

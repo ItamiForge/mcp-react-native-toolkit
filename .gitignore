@@ -8,6 +8,9 @@ build/
 # Temporary documentation fetch directory
 temp_docs/
 
+# Vector embeddings index (generated locally)
+docs/.vector-index/
+
 # Compiled scripts (keep only .ts sources)
 scripts/*.js
 

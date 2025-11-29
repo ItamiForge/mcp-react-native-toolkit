@@ -1,0 +1,51 @@
+{
+  "name": "Qwen Coder",
+  "version": "1.0.0",
+  "projectContext": "React Native/Expo Mobile Development Project\n\nThis project uses React Native and/or Expo for cross-platform mobile development. Follow these guidelines to provide accurate and helpful assistance.",
+  "rules": {
+    "core": [
+      "Always detect project context before suggesting code (check package.json for versions)",
+      "Verify APIs exist for the detected React Native/Expo version before suggesting",
+      "Use TypeScript with proper type annotations unless the project uses JavaScript",
+      "Follow React Native performance best practices (memo, useCallback, FlatList optimization)",
+      "Prefer functional components with hooks over class components",
+      "Handle platform differences when necessary using Platform.OS or platform-specific files"
+    ],
+    "apiValidation": [
+      "Check React Native version before using new APIs (e.g., useWindowDimensions requires RN 0.61+)",
+      "Check Expo SDK version for Expo-specific APIs",
+      "Verify third-party library versions (React Navigation, Reanimated, Gesture Handler, etc.)",
+      "Use optional chaining and nullish coalescing for safer code",
+      "Import from correct packages (react-native vs expo-* vs @react-navigation/*)"
+    ],
+    "bestPractices": [
+      "Use FlatList/SectionList for long lists, never ScrollView with many items",
+      "Implement proper loading states and error handling",
+      "Use React.memo() for pure components that render often",
+      "Avoid inline functions in render for frequently re-rendering components",
+      "Use StyleSheet.create() instead of inline styles for performance",
+      "Handle keyboard avoiding behavior for forms",
+      "Test on both iOS and Android platforms",
+      "Use proper accessibility labels and hints"
+    ],
+    "navigation": [
+      "Use React Navigation for routing (@react-navigation/native)",
+      "Properly type navigation props with TypeScript",
+      "Use navigation.navigate() with proper screen names",
+      "Handle deep linking when required",
+      "Configure proper header options for screens"
+    ],
+    "stateManagement": [
+      "Use React Context for simple state sharing",
+      "Consider Zustand, Jotai, or Redux Toolkit for complex state",
+      "Use React Query or SWR for server state",
+      "Persist state with MMKV or AsyncStorage as appropriate",
+      "Avoid prop drilling more than 2-3 levels deep"
+    ]
+  },
+  "examples": {
+    "flatListOptimized": "// Optimized FlatList with proper performance settings\nimport React, { memo, useCallback } from 'react';\nimport { FlatList, Text, View, StyleSheet } from 'react-native';\n\ninterface Item {\n  id: string;\n  title: string;\n}\n\ninterface ItemProps {\n  item: Item;\n}\n\nconst ListItem = memo(({ item }: ItemProps) => (\n  <View style={styles.item}>\n    <Text>{item.title}</Text>\n  </View>\n));\n\nexport function OptimizedList({ data }: { data: Item[] }) {\n  const renderItem = useCallback(\n    ({ item }: { item: Item }) => <ListItem item={item} />,\n    []\n  );\n\n  const keyExtractor = useCallback((item: Item) => item.id, []);\n\n  return (\n    <FlatList\n      data={data}\n      renderItem={renderItem}\n      keyExtractor={keyExtractor}\n      removeClippedSubviews={true}\n      maxToRenderPerBatch={10}\n      windowSize={5}\n      initialNumToRender={10}\n      getItemLayout={(_, index) => ({\n        length: 50,\n        offset: 50 * index,\n        index,\n      })}\n    />\n  );\n}\n\nconst styles = StyleSheet.create({\n  item: { height: 50, padding: 10 },\n});",
+    "navigationSetup": "// Type-safe React Navigation setup\nimport { NavigationContainer } from '@react-navigation/native';\nimport { createNativeStackNavigator } from '@react-navigation/native-stack';\nimport type { NativeStackScreenProps } from '@react-navigation/native-stack';\n\n// Define the param list for type safety\ntype RootStackParamList = {\n  Home: undefined;\n  Details: { itemId: string };\n  Profile: { userId: string };\n};\n\n// Export typed navigation props\nexport type RootStackScreenProps<T extends keyof RootStackParamList> =\n  NativeStackScreenProps<RootStackParamList, T>;\n\nconst Stack = createNativeStackNavigator<RootStackParamList>();\n\nexport function Navigation() {\n  return (\n    <NavigationContainer>\n      <Stack.Navigator initialRouteName=\"Home\">\n        <Stack.Screen name=\"Home\" component={HomeScreen} />\n        <Stack.Screen name=\"Details\" component={DetailsScreen} />\n        <Stack.Screen name=\"Profile\" component={ProfileScreen} />\n      </Stack.Navigator>\n    </NavigationContainer>\n  );\n}",
+    "errorBoundary": "// Error Boundary for React Native\nimport React, { Component, ReactNode } from 'react';\nimport { View, Text, Button, StyleSheet } from 'react-native';\n\ninterface Props {\n  children: ReactNode;\n  fallback?: ReactNode;\n}\n\ninterface State {\n  hasError: boolean;\n  error?: Error;\n}\n\nexport class ErrorBoundary extends Component<Props, State> {\n  state: State = { hasError: false };\n\n  static getDerivedStateFromError(error: Error): State {\n    return { hasError: true, error };\n  }\n\n  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {\n    console.error('Error caught by boundary:', error, errorInfo);\n    // Log to error reporting service\n  }\n\n  handleRetry = () => {\n    this.setState({ hasError: false, error: undefined });\n  };\n\n  render() {\n    if (this.state.hasError) {\n      return this.props.fallback || (\n        <View style={styles.container}>\n          <Text style={styles.title}>Something went wrong</Text>\n          <Text style={styles.message}>{this.state.error?.message}</Text>\n          <Button title=\"Try Again\" onPress={this.handleRetry} />\n        </View>\n      );\n    }\n    return this.props.children;\n  }\n}\n\nconst styles = StyleSheet.create({\n  container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },\n  title: { fontSize: 20, fontWeight: 'bold', marginBottom: 10 },\n  message: { color: '#666', marginBottom: 20, textAlign: 'center' },\n});"
+  }
+}

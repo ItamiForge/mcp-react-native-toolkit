@@ -6,7 +6,8 @@ import { semverResolver } from './semver-resolver.js';
 import { chunker } from './chunker.js';
 import { Indexer } from './indexer.js';
 import { fetchDocsForVersion, docsExist, extractMajorVersion } from './docs-fetcher.js';
-import type { DocChunk } from './types.js';
+import { configManager } from './config.js';
+import type { DocChunk, SemanticSearchResult, HybridSearchResult, Settings, VersionDiff, SymbolIndexEntry, ModifiedAPI } from './types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,9 +26,14 @@ export class DocsManager {
     private indexer: Indexer;
     private indexBuilt = false;
     private fetchingVersions = new Map<string, Promise<void>>();
+    private settings: Settings;
 
     constructor(private basePath: string = DOCS_BASE_PATH) {
-        this.indexer = new Indexer(basePath);
+        // Get settings from configManager
+        this.settings = configManager.getSettings();
+        
+        // Create indexer with settings
+        this.indexer = new Indexer(basePath, this.settings);
     }
 
     /**
@@ -114,12 +120,16 @@ export class DocsManager {
     /**
      * Maps library ID to version key in project context
      */
-    private getVersionKey(library: string): 'reactNative' | 'expo' | 'reactNavigation' | 'ignite' {
+    private getVersionKey(library: string): 'reactNative' | 'expo' | 'reactNavigation' | 'ignite' | 'reanimated' | 'gestureHandler' | 'mmkv' | 'skia' {
         const mapping: Record<string, any> = {
             'react-native': 'reactNative',
             'expo': 'expo',
             'react-navigation': 'reactNavigation',
-            'ignite': 'ignite'
+            'ignite': 'ignite',
+            'react-native-reanimated': 'reanimated',
+            'react-native-gesture-handler': 'gestureHandler',
+            'react-native-mmkv': 'mmkv',
+            'react-native-skia': 'skia'
         };
         return mapping[library] || library as any;
     }
@@ -290,5 +300,289 @@ export class DocsManager {
      */
     getIndexer(): Indexer {
         return this.indexer;
+    }
+
+    /**
+     * Performs semantic search using embeddings
+     * @param query - The search query
+     * @param topK - Number of results to return
+     * @param library - Optional library filter
+     * @param version - Optional version filter
+     * @returns Array of semantic search results
+     */
+    async semanticSearch(
+        query: string,
+        topK: number = 10,
+        library?: string,
+        version?: string
+    ): Promise<SemanticSearchResult[]> {
+        await this.ensureIndex();
+        
+        try {
+            return await this.indexer.semanticSearch(query, topK, library, version);
+        } catch (error) {
+            console.error('Semantic search failed:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Performs hybrid search combining keyword and semantic search
+     * @param query - The search query
+     * @param topK - Number of results to return
+     * @param library - Optional library filter
+     * @param version - Optional version filter
+     * @returns Array of hybrid search results
+     */
+    async hybridSearch(
+        query: string,
+        topK: number = 10,
+        library?: string,
+        version?: string
+    ): Promise<HybridSearchResult[]> {
+        await this.ensureIndex();
+        
+        try {
+            return await this.indexer.hybridSearch(query, topK, library, version);
+        } catch (error) {
+            console.error('Hybrid search failed:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Checks if semantic search is enabled
+     * @returns true if semantic search is enabled in settings
+     */
+    isSemanticSearchEnabled(): boolean {
+        return this.indexer.isSemanticSearchEnabled();
+    }
+
+    /**
+     * Compares APIs between two versions of a library
+     * @param library - The library to compare
+     * @param fromVersion - Starting version
+     * @param toVersion - Target version
+     * @returns VersionDiff with added, removed, and modified APIs
+     */
+    async compareVersions(
+        library: string,
+        fromVersion: string,
+        toVersion: string
+    ): Promise<VersionDiff> {
+        await this.ensureIndex();
+
+        // Ensure both versions are available
+        const resolvedFromVersion = await this.resolveVersion(library, fromVersion);
+        const resolvedToVersion = await this.resolveVersion(library, toVersion);
+
+        // Get all symbols for both versions
+        const fromSymbols = new Map<string, SymbolIndexEntry>();
+        const toSymbols = new Map<string, SymbolIndexEntry>();
+
+        // Collect symbols from the index
+        const index = this.indexer.getIndex();
+        for (const [symbolName, entries] of index.symbols.entries()) {
+            for (const entry of entries) {
+                if (entry.library === library) {
+                    if (entry.version === resolvedFromVersion) {
+                        fromSymbols.set(symbolName, entry);
+                    }
+                    if (entry.version === resolvedToVersion) {
+                        toSymbols.set(symbolName, entry);
+                    }
+                }
+            }
+        }
+
+        // Calculate differences
+        const added: SymbolIndexEntry[] = [];
+        const removed: SymbolIndexEntry[] = [];
+        const modified: ModifiedAPI[] = [];
+        let unchanged = 0;
+
+        // Find added and modified
+        for (const [symbolName, toEntry] of toSymbols.entries()) {
+            const fromEntry = fromSymbols.get(symbolName);
+            if (!fromEntry) {
+                added.push(toEntry);
+            } else {
+                // Check if signature changed
+                if (fromEntry.signature !== toEntry.signature) {
+                    modified.push({
+                        symbol: symbolName,
+                        fromSignature: fromEntry.signature,
+                        toSignature: toEntry.signature,
+                        changes: this.describeSignatureChange(fromEntry.signature, toEntry.signature),
+                    });
+                } else {
+                    unchanged++;
+                }
+            }
+        }
+
+        // Find removed
+        for (const [symbolName, fromEntry] of fromSymbols.entries()) {
+            if (!toSymbols.has(symbolName)) {
+                removed.push(fromEntry);
+            }
+        }
+
+        return {
+            library,
+            fromVersion: resolvedFromVersion,
+            toVersion: resolvedToVersion,
+            added,
+            removed,
+            modified,
+            unchanged,
+        };
+    }
+
+    /**
+     * Describe what changed between two signatures
+     */
+    private describeSignatureChange(from?: string, to?: string): string {
+        if (!from && to) return 'New signature added';
+        if (from && !to) return 'Signature removed';
+        if (!from && !to) return 'Unknown change';
+        return 'Signature modified';
+    }
+
+    /**
+     * Get a formatted version diff with additional context
+     */
+    async getVersionDiff(
+        library: string,
+        fromVersion: string,
+        toVersion: string
+    ): Promise<VersionDiff> {
+        const diff = await this.compareVersions(library, fromVersion, toVersion);
+        
+        // The diff is already computed, just return it
+        // This method exists for API consistency and future enhancements
+        return diff;
+    }
+
+    /**
+     * Find migration-related documentation using semantic search
+     */
+    async findMigrationDocs(
+        library: string,
+        fromVersion: string,
+        toVersion: string
+    ): Promise<string[]> {
+        await this.ensureIndex();
+
+        const queries = [
+            `migration guide ${fromVersion} to ${toVersion}`,
+            `breaking changes ${toVersion}`,
+            `upgrade guide ${library}`,
+            `changelog ${toVersion}`,
+        ];
+
+        const topics = new Set<string>();
+
+        for (const query of queries) {
+            try {
+                const results = await this.semanticSearch(query, 5, library);
+                for (const result of results) {
+                    topics.add(result.topic);
+                }
+            } catch {
+                // Semantic search may not be available, try keyword search
+                const symbolResults = await this.searchSymbols(query, 5);
+                for (const result of symbolResults) {
+                    if (result.library === library) {
+                        topics.add(result.symbol);
+                    }
+                }
+            }
+        }
+
+        return Array.from(topics);
+    }
+
+    /**
+     * Get deprecated APIs for a library version
+     */
+    async getDeprecatedAPIs(
+        library: string,
+        version: string
+    ): Promise<SymbolIndexEntry[]> {
+        await this.ensureIndex();
+
+        const deprecated: SymbolIndexEntry[] = [];
+        const resolvedVersion = await this.resolveVersion(library, version);
+
+        // Search for deprecated mentions in docs
+        try {
+            const results = await this.semanticSearch('deprecated API', 20, library, resolvedVersion);
+            for (const result of results) {
+                // Extract symbol names from deprecated content
+                const symbols = this.indexer.findSymbol(result.topic, library, resolvedVersion);
+                deprecated.push(...symbols);
+            }
+        } catch {
+            // Fallback: search symbols with 'deprecated' in description
+            const index = this.indexer.getIndex();
+            for (const [, entries] of index.symbols.entries()) {
+                for (const entry of entries) {
+                    if (entry.library === library && entry.version === resolvedVersion) {
+                        if (entry.description?.toLowerCase().includes('deprecated')) {
+                            deprecated.push(entry);
+                        }
+                    }
+                }
+            }
+        }
+
+        return deprecated;
+    }
+
+    /**
+     * Get new APIs introduced in a library version
+     */
+    async getNewAPIs(
+        library: string,
+        version: string
+    ): Promise<SymbolIndexEntry[]> {
+        await this.ensureIndex();
+
+        const resolvedVersion = await this.resolveVersion(library, version);
+        const availableVersions = this.getAvailableVersions(library);
+        
+        // Find previous version
+        const versionIndex = availableVersions.indexOf(resolvedVersion);
+        if (versionIndex <= 0) {
+            // No previous version to compare
+            return [];
+        }
+
+        const previousVersion = availableVersions[versionIndex - 1];
+        const diff = await this.compareVersions(library, previousVersion, resolvedVersion);
+        
+        return diff.added;
+    }
+
+    /**
+     * Get the signature/documentation for a specific API
+     */
+    async getAPISignature(
+        library: string,
+        version: string,
+        symbol: string
+    ): Promise<string | null> {
+        await this.ensureIndex();
+
+        const resolvedVersion = await this.resolveVersion(library, version);
+        const entries = this.indexer.findSymbol(symbol, library, resolvedVersion);
+
+        if (entries.length === 0) {
+            return null;
+        }
+
+        const entry = entries[0];
+        return entry.signature || entry.description || null;
     }
 }

@@ -28,7 +28,8 @@ const DocSourceSchema = z.object({
     description: z.string().optional(),
     sparseCheckoutPaths: z.array(z.string()).optional(),
     excludePaths: z.array(z.string()).optional(),
-    preprocessingRules: PreprocessingRulesSchema.optional()
+    preprocessingRules: PreprocessingRulesSchema.optional(),
+    enabled: z.boolean().default(true)
 });
 
 const SettingsSchema = z.object({
@@ -37,7 +38,11 @@ const SettingsSchema = z.object({
     cleanupTempDocs: z.boolean().default(true),
     preprocessMarkdown: z.boolean().default(true),
     chunkSizeTokens: z.number().default(2000),
-    cacheEnabled: z.boolean().default(true)
+    cacheEnabled: z.boolean().default(true),
+    semanticSearchEnabled: z.boolean().default(true),
+    embeddingModel: z.string().default('Xenova/all-MiniLM-L6-v2'),
+    vectorIndexPath: z.string().default('./docs/.vector-index'),
+    embeddingBatchSize: z.number().default(32)
 });
 
 const ConfigSchema = z.object({
@@ -118,7 +123,11 @@ export class ConfigManager {
             cleanupTempDocs: true,
             preprocessMarkdown: true,
             chunkSizeTokens: 2000,
-            cacheEnabled: true
+            cacheEnabled: true,
+            semanticSearchEnabled: true,
+            embeddingModel: 'Xenova/all-MiniLM-L6-v2',
+            vectorIndexPath: './docs/.vector-index',
+            embeddingBatchSize: 32
         };
     }
 

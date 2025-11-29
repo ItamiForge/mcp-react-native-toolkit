@@ -346,7 +346,16 @@ function countFiles(dir: string): number {
  * Fetches docs for multiple libraries at once
  */
 export async function fetchDocsForProject(
-    versions: { reactNative?: string; expo?: string; reactNavigation?: string; ignite?: boolean },
+    versions: {
+        reactNative?: string;
+        expo?: string;
+        reactNavigation?: string;
+        ignite?: boolean;
+        reanimated?: string;
+        gestureHandler?: string;
+        mmkv?: string;
+        skia?: string;
+    },
     options: { quiet?: boolean } = {}
 ): Promise<FetchResult[]> {
     const fetches: Promise<FetchResult>[] = [];
@@ -362,6 +371,18 @@ export async function fetchDocsForProject(
     }
     if (versions.ignite) {
         fetches.push(fetchDocsForVersion('ignite', 'latest', options));
+    }
+    if (versions.reanimated) {
+        fetches.push(fetchDocsForVersion('react-native-reanimated', versions.reanimated, options));
+    }
+    if (versions.gestureHandler) {
+        fetches.push(fetchDocsForVersion('react-native-gesture-handler', versions.gestureHandler, options));
+    }
+    if (versions.mmkv) {
+        fetches.push(fetchDocsForVersion('react-native-mmkv', versions.mmkv, options));
+    }
+    if (versions.skia) {
+        fetches.push(fetchDocsForVersion('react-native-skia', versions.skia, options));
     }
 
     return Promise.all(fetches);
