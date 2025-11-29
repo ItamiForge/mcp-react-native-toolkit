@@ -10,6 +10,7 @@
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync } from 'fs';
+import { homedir } from 'os';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -53,6 +54,60 @@ function setupTemplate(targetPath, templatePath, description) {
   return true;
 }
 
+/**
+ * Setup MCP server configuration in .vscode/mcp.json
+ * - Creates if doesn't exist
+ * - Merges into existing config without overwriting other servers
+ */
+function setupVSCodeMcpConfig() {
+  const mcpConfigPath = join(PROJECT_DIR, '.vscode', 'mcp.json');
+  const vscodeDir = join(PROJECT_DIR, '.vscode');
+  
+  const serverConfig = {
+    "type": "stdio",
+    "command": "npx",
+    "args": ["-y", "mcp-react-native-toolkit"]
+  };
+
+  // Ensure .vscode directory exists
+  if (!existsSync(vscodeDir)) {
+    mkdirSync(vscodeDir, { recursive: true });
+  }
+
+  if (existsSync(mcpConfigPath)) {
+    try {
+      const existing = JSON.parse(readFileSync(mcpConfigPath, 'utf-8'));
+      
+      // Check if already configured
+      if (existing.servers?.['react-native-toolkit']) {
+        console.log('  ✓ VS Code MCP config (already configured)');
+        return true;
+      }
+      
+      // Merge into existing config
+      existing.servers = existing.servers || {};
+      existing.servers['react-native-toolkit'] = serverConfig;
+      
+      writeFileSync(mcpConfigPath, JSON.stringify(existing, null, 2) + '\n');
+      console.log('  + Updated VS Code MCP config (.vscode/mcp.json)');
+      return true;
+    } catch (err) {
+      console.log(`  ⚠️  Could not parse existing .vscode/mcp.json: ${err.message}`);
+      return false;
+    }
+  } else {
+    // Create new config
+    const newConfig = {
+      servers: {
+        'react-native-toolkit': serverConfig
+      }
+    };
+    writeFileSync(mcpConfigPath, JSON.stringify(newConfig, null, 2) + '\n');
+    console.log('  + Created VS Code MCP config (.vscode/mcp.json)');
+    return true;
+  }
+}
+
 // Detect environment and apply appropriate templates
 console.log('\n📋 Setting up AI assistant configuration...\n');
 
@@ -87,23 +142,38 @@ if (!configured) {
   setupTemplate('ai-instructions.md', 'ai-instructions.md', 'AI Instructions (generic)');
 }
 
-// Provide MCP server configuration guidance
+// Setup MCP server configuration
 console.log('\n⚙️  MCP Server Configuration\n');
-console.log('   Add to your editor\'s MCP config:\n');
 
-const mcpConfig = {
-  "react-native-toolkit": {
-    "command": "npx",
-    "args": ["-y", "mcp-react-native-toolkit"]
+// Auto-configure VS Code (project-local config is safe)
+if (existsSync(join(PROJECT_DIR, '.vscode'))) {
+  setupVSCodeMcpConfig();
+}
+
+// For global configs, just print instructions (safer)
+const cursorConfig = join(homedir(), '.cursor', 'mcp.json');
+const claudeConfig = join(homedir(), 'Library', 'Application Support', 'Claude', 'claude_desktop_config.json');
+
+const hasGlobalConfigs = existsSync(cursorConfig) || existsSync(claudeConfig);
+
+if (hasGlobalConfigs) {
+  console.log('\n   For other AI tools, add this to their config:\n');
+  
+  const mcpServerSnippet = {
+    "react-native-toolkit": {
+      "command": "npx",
+      "args": ["-y", "mcp-react-native-toolkit"]
+    }
+  };
+  
+  console.log('   ' + JSON.stringify(mcpServerSnippet, null, 2).split('\n').join('\n   '));
+  
+  if (existsSync(cursorConfig)) {
+    console.log(`\n   • Cursor: ~/.cursor/mcp.json`);
   }
-};
-
-console.log('   ' + JSON.stringify(mcpConfig, null, 2).split('\n').join('\n   '));
-
-console.log('\n   Config file locations:');
-console.log('   • VS Code:  .vscode/mcp.json');
-console.log('   • Cursor:   ~/.cursor/mcp.json');
-console.log('   • Claude:   ~/Library/Application Support/Claude/claude_desktop_config.json');
+  if (existsSync(claudeConfig)) {
+    console.log(`   • Claude: ~/Library/Application Support/Claude/claude_desktop_config.json`);
+  }
+}
 
 console.log('\n✅ Setup complete!\n');
-console.log('💡 Tip: Run `npx mcp-react-native-toolkit --help` for more options.\n');
