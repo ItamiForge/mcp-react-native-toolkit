@@ -1,0 +1,83 @@
+#!/bin/bash
+
+# Get the absolute path of the toolkit directory (where this script lives/..)
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+TOOLKIT_ROOT="$(dirname "$SCRIPT_DIR")"
+TEMPLATES_DIR="$TOOLKIT_ROOT/templates"
+
+echo "🔌 Linking project to MCP React Native Toolkit..."
+echo "   Toolkit Location: $TOOLKIT_ROOT"
+echo "   Target Project: $PWD"
+
+# Function to append rules if they don't exist
+append_rules() {
+  local target_file=$1
+  local template_file=$2
+  local description=$3
+
+  if [ -f "$target_file" ]; then
+    echo "  - Updating $description ($target_file)..."
+    # Check if we already added our marker
+    if grep -q "MCP TOOL USAGE" "$target_file"; then
+      echo "    (Already configured)"
+    else
+      echo "" >> "$target_file"
+      echo "<!-- Added by MCP React Native Toolkit -->" >> "$target_file"
+      cat "$template_file" >> "$target_file"
+    fi
+  else
+    echo "  - Creating $description ($target_file)..."
+    # Create directory if needed (e.g. .github)
+    mkdir -p "$(dirname "$target_file")"
+    cp "$template_file" "$target_file"
+  fi
+}
+
+# 1. Apply Enforcement Rules
+echo "🛡️  Applying Enforcement Rules..."
+
+# Detect Cursor
+if [ -d ".cursor" ] || [ -f ".cursorrules" ]; then
+  append_rules ".cursorrules" "$TEMPLATES_DIR/cursorrules" "Cursor Rules"
+fi
+
+# Detect VS Code (Copilot)
+if [ -d ".vscode" ]; then
+  append_rules ".github/copilot-instructions.md" "$TEMPLATES_DIR/copilot-instructions.md" "Copilot Instructions"
+fi
+
+# Generic Fallback (always offer this)
+if [ ! -f "agent-instructions.md" ]; then
+    cp "$TEMPLATES_DIR/generic-instructions.md" "agent-instructions.md"
+    echo "  - Created generic agent-instructions.md"
+fi
+
+# 2. Configure MCP Server (Optional)
+echo "⚙️  Configuring MCP Server..."
+if [ -d ".vscode" ]; then
+    MCP_CONFIG=".vscode/mcp.json"
+    if [ ! -f "$MCP_CONFIG" ]; then
+        echo "  - Creating project-specific .vscode/mcp.json..."
+        cat > "$MCP_CONFIG" <<EOF
+{
+  "servers": {
+    "mcp-react-native-toolkit": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "$TOOLKIT_ROOT/dist/index.js"
+      ],
+      "env": {}
+    }
+  }
+}
+EOF
+    else
+        echo "  - .vscode/mcp.json already exists. Skipping."
+        echo "    (Ensure it points to: $TOOLKIT_ROOT/dist/index.js)"
+    fi
+else
+    echo "  - No .vscode folder found. Skipping project-specific MCP config."
+fi
+
+echo "✅ Project linked successfully!"

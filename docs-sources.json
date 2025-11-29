@@ -1,0 +1,69 @@
+{
+    "sources": [
+        {
+            "id": "react-native",
+            "name": "React Native",
+            "repo": "https://github.com/facebook/react-native-website.git",
+            "docsPath": "docs",
+            "branch": "main",
+            "versionStrategy": "none",
+            "description": "Official React Native documentation",
+            "preprocessingRules": {
+                "stripComments": true,
+                "removeNavigation": true,
+                "minifyWhitespace": true
+            }
+        },
+        {
+            "id": "expo",
+            "name": "Expo",
+            "repo": "https://github.com/expo/expo.git",
+            "docsPath": "docs/pages",
+            "branch": "main",
+            "versionStrategy": "sdk-branch",
+            "versionBranchPattern": "sdk-{major}",
+            "description": "Official Expo SDK documentation",
+            "preprocessingRules": {
+                "stripComments": true,
+                "removeNavigation": true,
+                "minifyWhitespace": true
+            }
+        },
+        {
+            "id": "react-navigation",
+            "name": "React Navigation",
+            "repo": "https://github.com/react-navigation/react-navigation.github.io.git",
+            "docsPath": "versioned_docs/version-{major}.x",
+            "branch": "main",
+            "versionStrategy": "versioned-folder",
+            "description": "React Navigation routing and navigation library",
+            "preprocessingRules": {
+                "stripComments": true,
+                "removeNavigation": true,
+                "minifyWhitespace": true
+            }
+        },
+        {
+            "id": "ignite",
+            "name": "Ignite",
+            "repo": "https://github.com/infinitered/ignite.git",
+            "docsPath": "docs",
+            "branch": "master",
+            "versionStrategy": "none",
+            "description": "Ignite CLI boilerplate for React Native",
+            "preprocessingRules": {
+                "stripComments": true,
+                "removeNavigation": true,
+                "minifyWhitespace": true
+            }
+        }
+    ],
+    "settings": {
+        "defaultLocale": "en",
+        "enableSparseCheckout": true,
+        "cleanupTempDocs": true,
+        "preprocessMarkdown": true,
+        "chunkSizeTokens": 2000,
+        "cacheEnabled": true
+    }
+}

@@ -1,0 +1,5 @@
+# rumdl configuration
+
+[global]
+# Disable line length rule
+disable = ["MD013"]
