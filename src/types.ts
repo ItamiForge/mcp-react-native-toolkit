@@ -29,14 +29,18 @@ export interface DocSource {
     repo: string;
     docsPath: string;
     branch: string;
-    versions: string[];
-    locales: string[];
+    versions?: string[];
+    locales?: string[];
     description?: string;
     sparseCheckoutPaths?: string[];
     excludePaths?: string[];
     preprocessingRules?: PreprocessingRules;
     /** Whether this source is enabled (defaults to true) */
     enabled?: boolean;
+    /** Version strategy for documentation sources */
+    versionStrategy?: 'none' | 'sdk-branch' | 'versioned-folder';
+    /** Pattern for version branch names (e.g., 'sdk-{major}') */
+    versionBranchPattern?: string;
 }
 
 export interface PreprocessingRules {

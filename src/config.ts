@@ -23,13 +23,15 @@ const DocSourceSchema = z.object({
     repo: z.string().url(),
     docsPath: z.string(),
     branch: z.string().default('main'),
-    versions: z.array(z.string()).default(['latest']),
-    locales: z.array(z.string()).default(['en']),
+    versions: z.array(z.string()).optional(),
+    locales: z.array(z.string()).optional(),
     description: z.string().optional(),
     sparseCheckoutPaths: z.array(z.string()).optional(),
     excludePaths: z.array(z.string()).optional(),
     preprocessingRules: PreprocessingRulesSchema.optional(),
-    enabled: z.boolean().default(true)
+    enabled: z.boolean().default(true),
+    versionStrategy: z.enum(['none', 'sdk-branch', 'versioned-folder']).default('none'),
+    versionBranchPattern: z.string().optional()
 });
 
 const SettingsSchema = z.object({
@@ -113,6 +115,15 @@ export class ConfigManager {
     }
 
     /**
+     * Gets only enabled documentation sources (enabled !== false).
+     * Sources without an explicit enabled field default to true.
+     */
+    getEnabledSources(): DocSource[] {
+        const config = this.load();
+        return config.sources.filter(source => source.enabled !== false);
+    }
+
+    /**
      * Gets the settings object with defaults.
      */
     getSettings(): Settings {
@@ -154,8 +165,8 @@ export class ConfigManager {
             if (!source.repo.startsWith('https://')) {
                 errors.push(`Source ${source.id}: repo must be an HTTPS URL`);
             }
-            if (source.versions.length === 0) {
-                errors.push(`Source ${source.id}: must have at least one version`);
+            if (source.versions && source.versions.length === 0) {
+                errors.push(`Source ${source.id}: versions array cannot be empty`);
             }
         }
 

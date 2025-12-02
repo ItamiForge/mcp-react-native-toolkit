@@ -64,17 +64,56 @@ function removeDir(dir: string): void {
     }
 }
 
-function gitAsync(args: string[], cwd: string): Promise<string> {
+// Default timeout for git operations (60 seconds)
+const GIT_TIMEOUT_MS = 60000;
+
+/**
+ * Checks if git is available on the system
+ * @returns true if git is installed and accessible, false otherwise
+ */
+export async function checkGitAvailable(): Promise<boolean> {
+    return new Promise((resolve) => {
+        const proc = spawn('git', ['--version'], { stdio: ['pipe', 'pipe', 'pipe'] });
+        
+        proc.on('close', (code) => {
+            resolve(code === 0);
+        });
+        
+        proc.on('error', () => {
+            resolve(false);
+        });
+    });
+}
+
+/**
+ * Executes a git command with timeout support
+ * @param args - Git command arguments
+ * @param cwd - Working directory
+ * @param timeoutMs - Timeout in milliseconds (default: 60000)
+ * @returns Promise resolving to stdout on success
+ */
+function gitAsync(args: string[], cwd: string, timeoutMs: number = GIT_TIMEOUT_MS): Promise<string> {
     return new Promise((resolve, reject) => {
         const proc = spawn('git', args, { cwd, stdio: ['pipe', 'pipe', 'pipe'] });
         let stdout = '';
         let stderr = '';
         let settled = false;
 
+        // Set up timeout
+        const timeout = setTimeout(() => {
+            if (settled) return;
+            settled = true;
+            proc.kill('SIGTERM');
+            // Force kill after 5 seconds if SIGTERM doesn't work
+            setTimeout(() => proc.kill('SIGKILL'), 5000);
+            reject(new Error(`Git operation timed out after ${timeoutMs / 1000} seconds. The operation may be taking too long or the network connection may be slow.`));
+        }, timeoutMs);
+
         proc.stdout.on('data', (data) => { stdout += data.toString(); });
         proc.stderr.on('data', (data) => { stderr += data.toString(); });
 
         proc.on('close', (code) => {
+            clearTimeout(timeout);
             if (settled) return;
             settled = true;
             if (code === 0) {
@@ -85,9 +124,15 @@ function gitAsync(args: string[], cwd: string): Promise<string> {
         });
 
         proc.on('error', (err) => {
+            clearTimeout(timeout);
             if (settled) return;
             settled = true;
-            reject(err);
+            // Check if it's a spawn error (git not found)
+            if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+                reject(new Error('Git is not installed or not found in PATH. Please install git to fetch documentation.'));
+            } else {
+                reject(err);
+            }
         });
     });
 }
@@ -186,12 +231,38 @@ function preprocessMarkdown(content: string): string {
 // ============================================================================
 
 /**
+ * Creates a descriptive error message for git clone failures
+ */
+function formatCloneError(repoUrl: string, branch: string, errorMsg: string): string {
+    if (errorMsg.includes('could not find remote branch')) {
+        return `Failed to clone repository: Branch '${branch}' not found in ${repoUrl}`;
+    }
+    if (errorMsg.includes('Repository not found') || errorMsg.includes('not found')) {
+        return `Failed to clone repository: Repository not found at ${repoUrl}. Please verify the URL is correct and accessible.`;
+    }
+    if (errorMsg.includes('Authentication failed') || errorMsg.includes('could not read Username')) {
+        return `Failed to clone repository: Authentication required for ${repoUrl}. This may be a private repository.`;
+    }
+    if (errorMsg.includes('timed out')) {
+        return `Failed to clone repository: Operation timed out while accessing ${repoUrl}. Please check your network connection.`;
+    }
+    return `Failed to clone repository ${repoUrl} (branch: ${branch}): ${errorMsg}`;
+}
+
+/**
+ * Creates a descriptive error message for missing docs path
+ */
+function formatDocsPathError(repoUrl: string, docsPath: string): string {
+    return `Documentation path '${docsPath}' not found in repository ${repoUrl}. The repository structure may have changed or the path may be incorrect.`;
+}
+
+/**
  * Fetches docs for a specific library and version using sparse checkout
  */
 export async function fetchDocsForVersion(
     library: string,
     version: string,
-    options: { quiet?: boolean } = {}
+    options: { quiet?: boolean; timeoutMs?: number } = {}
 ): Promise<FetchResult> {
     const source = getSourceById(library);
     if (!source) {
@@ -201,6 +272,22 @@ export async function fetchDocsForVersion(
             version,
             fileCount: 0,
             error: `Unknown library: ${library}`,
+        };
+    }
+
+    // Check if git is available before attempting any git operations
+    const gitAvailable = await checkGitAvailable();
+    if (!gitAvailable) {
+        const errorMsg = 'Git is not installed or not found in PATH. Please install git to fetch documentation. Visit https://git-scm.com/downloads for installation instructions.';
+        if (!options.quiet) {
+            console.error(`❌ [${library}] ${errorMsg}`);
+        }
+        return {
+            success: false,
+            source: library,
+            version,
+            fileCount: 0,
+            error: errorMsg,
         };
     }
 
@@ -223,30 +310,47 @@ export async function fetchDocsForVersion(
 
     const startTime = Date.now();
     const cloneDir = path.join(TEMP_DIR, `${library}-${Date.now()}`);
+    const timeoutMs = options.timeoutMs || GIT_TIMEOUT_MS;
+
+    // Track branch and docsPath for error messages
+    let branch = '';
+    let docsPath = '';
 
     try {
         ensureDir(TEMP_DIR);
         ensureDir(targetDir);
 
         // Determine branch and path based on version strategy
-        const branch = getBranchForVersion(source, majorVersion || 0);
-        const docsPath = getDocsPathForVersion(source, majorVersion || 0);
+        branch = getBranchForVersion(source, majorVersion || 0);
+        docsPath = getDocsPathForVersion(source, majorVersion || 0);
 
         // Clone with sparse checkout
         await gitAsync(
             ['clone', '--filter=blob:none', '--no-checkout', '--sparse', '--depth=1',
              '--branch', branch, source.repo, cloneDir],
-            TEMP_DIR
+            TEMP_DIR,
+            timeoutMs
         );
 
         // Set sparse checkout path
-        await gitAsync(['sparse-checkout', 'set', docsPath], cloneDir);
+        await gitAsync(['sparse-checkout', 'set', docsPath], cloneDir, timeoutMs);
 
         // Checkout files
-        await gitAsync(['checkout'], cloneDir);
+        await gitAsync(['checkout'], cloneDir, timeoutMs);
 
         // Copy and process markdown files
         const sourceDocsDir = path.join(cloneDir, docsPath);
+        
+        // Check if docs path exists after checkout
+        if (!fs.existsSync(sourceDocsDir)) {
+            removeDir(cloneDir);
+            const errorMsg = formatDocsPathError(source.repo, docsPath);
+            if (!options.quiet) {
+                console.error(`❌ [${library}] ${errorMsg}`);
+            }
+            return { success: false, source: library, version: versionFolder, fileCount: 0, error: errorMsg };
+        }
+        
         const fileCount = await processMarkdownFiles(sourceDocsDir, targetDir);
 
         // Cleanup
@@ -260,10 +364,13 @@ export async function fetchDocsForVersion(
         return { success: true, source: library, version: versionFolder, fileCount };
     } catch (error) {
         removeDir(cloneDir);
-        const errorMsg = error instanceof Error ? error.message : String(error);
+        const rawErrorMsg = error instanceof Error ? error.message : String(error);
+        
+        // Format error message with repository context
+        const errorMsg = formatCloneError(source.repo, branch, rawErrorMsg);
 
         // If version-specific branch doesn't exist, fall back to latest
-        if (majorVersion && errorMsg.includes('could not find remote branch')) {
+        if (majorVersion && rawErrorMsg.includes('could not find remote branch')) {
             if (!options.quiet) {
                 console.log(`⚠️ [${library}] Branch for v${majorVersion} not found, falling back to latest`);
             }
@@ -271,7 +378,7 @@ export async function fetchDocsForVersion(
         }
 
         if (!options.quiet) {
-            console.error(`❌ [${library}] Failed: ${errorMsg}`);
+            console.error(`❌ [${library}] ${errorMsg}`);
         }
         return { success: false, source: library, version: versionFolder, fileCount: 0, error: errorMsg };
     }

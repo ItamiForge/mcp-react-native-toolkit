@@ -1096,6 +1096,411 @@ export default {{componentName}};`,
             'Use worklets (functions with "worklet" directive) for complex UI thread logic'
         ]
     },
+
+    'reanimated-spring': {
+        id: 'reanimated-spring',
+        name: 'Reanimated Spring Animation',
+        description: 'Spring-based animations with Reanimated for natural motion',
+        library: 'react-native-reanimated',
+        category: 'animation',
+        language: 'typescript',
+        code: `import React from 'react';
+import { StyleSheet, View, Pressable, Text } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
+
+{{#if types}}
+interface SpringConfig {
+  damping: number;
+  stiffness: number;
+  mass: number;
+}
+{{/if}}
+
+{{#if comments}}
+/**
+ * {{componentName}} - Spring animation examples
+ * Demonstrates various spring configurations for natural motion
+ */
+{{/if}}
+const {{componentName}} = () => {
+  const scale = useSharedValue(1);
+  const rotation = useSharedValue(0);
+  const translateY = useSharedValue(0);
+
+  {{#if comments}}// Bouncy spring configuration{{/if}}
+  const bouncyConfig{{#if types}}: SpringConfig{{/if}} = {
+    damping: 4,
+    stiffness: 100,
+    mass: 0.5,
+  };
+
+  {{#if comments}}// Smooth spring configuration{{/if}}
+  const smoothConfig{{#if types}}: SpringConfig{{/if}} = {
+    damping: 15,
+    stiffness: 100,
+    mass: 1,
+  };
+
+  const handlePress = () => {
+    {{#if comments}}// Sequence: scale up, rotate, then reset{{/if}}
+    scale.value = withSequence(
+      withSpring(1.2, bouncyConfig),
+      withSpring(1, smoothConfig)
+    );
+
+    rotation.value = withSequence(
+      withSpring(10, bouncyConfig),
+      withSpring(-10, bouncyConfig),
+      withSpring(0, smoothConfig)
+    );
+
+    translateY.value = withSequence(
+      withSpring(-20, bouncyConfig),
+      withSpring(0, smoothConfig)
+    );
+  };
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scale: scale.value },
+      { rotate: \`\${rotation.value}deg\` },
+      { translateY: translateY.value },
+    ],
+  }));
+
+  return (
+    <View style={styles.container}>
+      <Pressable onPress={handlePress}>
+        <Animated.View style={[styles.box, animatedStyle]}>
+          <Text style={styles.text}>Tap Me</Text>
+        </Animated.View>
+      </Pressable>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  box: {
+    width: 120,
+    height: 120,
+    backgroundColor: '#5856D6',
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  text: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});
+
+export default {{componentName}};`,
+        dependencies: ['react-native-reanimated'],
+        imports: ['useSharedValue', 'useAnimatedStyle', 'withSpring', 'withSequence', 'withTiming'],
+        notes: [
+            'Lower damping = more bouncy, higher damping = more smooth',
+            'withSequence chains animations one after another',
+            'Use withDelay to add pauses between animations'
+        ]
+    },
+
+    // ============================================
+    // Image Patterns
+    // ============================================
+    'skia-basic': {
+        id: 'skia-basic',
+        name: 'React Native Skia Basic',
+        description: 'Basic Skia canvas with shapes and gradients',
+        library: 'react-native-skia',
+        category: 'image',
+        language: 'typescript',
+        code: `import React from 'react';
+import { StyleSheet, View } from 'react-native';
+import {
+  Canvas,
+  Circle,
+  Group,
+  LinearGradient,
+  RoundedRect,
+  vec,
+  Paint,
+  BlurMask,
+} from '@shopify/react-native-skia';
+
+{{#if types}}
+interface {{componentName}}Props {
+  width?: number;
+  height?: number;
+}
+{{/if}}
+
+{{#if comments}}
+/**
+ * {{componentName}} - Basic Skia canvas with shapes
+ * Demonstrates gradients, shadows, and basic shapes
+ */
+{{/if}}
+const {{componentName}} = ({{#if types}}{ width = 300, height = 300 }: {{componentName}}Props{{/if}}{{#unless types}}{ width = 300, height = 300 }{{/unless}}) => {
+  const centerX = width / 2;
+  const centerY = height / 2;
+
+  return (
+    <View style={styles.container}>
+      <Canvas style={{ width, height }}>
+        {{#if comments}}{/* Background rounded rectangle with gradient */}{{/if}}
+        <RoundedRect x={20} y={20} width={width - 40} height={height - 40} r={16}>
+          <LinearGradient
+            start={vec(0, 0)}
+            end={vec(width, height)}
+            colors={['#667eea', '#764ba2']}
+          />
+        </RoundedRect>
+
+        {{#if comments}}{/* Circle with blur shadow */}{{/if}}
+        <Group>
+          <Circle cx={centerX} cy={centerY} r={60} color="#fff" opacity={0.3}>
+            <BlurMask blur={10} style="normal" />
+          </Circle>
+          <Circle cx={centerX} cy={centerY} r={50} color="#fff" />
+        </Group>
+
+        {{#if comments}}{/* Decorative circles */}{{/if}}
+        <Circle cx={80} cy={80} r={30} color="rgba(255,255,255,0.2)" />
+        <Circle cx={width - 80} cy={height - 80} r={40} color="rgba(255,255,255,0.15)" />
+      </Canvas>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+});
+
+export default {{componentName}};`,
+        dependencies: ['@shopify/react-native-skia'],
+        imports: ['Canvas', 'Circle', 'Group', 'LinearGradient', 'RoundedRect', 'vec', 'BlurMask'],
+        notes: [
+            'Skia provides GPU-accelerated 2D graphics',
+            'Use vec() helper for creating points',
+            'Combine with Reanimated for animated graphics'
+        ]
+    },
+
+    'image-picker': {
+        id: 'image-picker',
+        name: 'Image Picker Component',
+        description: 'Image selection from camera or gallery with preview',
+        library: 'expo',
+        category: 'image',
+        language: 'typescript',
+        code: `import React, { useState } from 'react';
+import { StyleSheet, View, Image, Text, TouchableOpacity, Alert } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+
+{{#if types}}
+interface ImageAsset {
+  uri: string;
+  width: number;
+  height: number;
+  type?: 'image' | 'video';
+}
+
+interface {{componentName}}Props {
+  onImageSelected?: (image: ImageAsset) => void;
+  aspectRatio?: [number, number];
+  allowsEditing?: boolean;
+}
+{{/if}}
+
+{{#if comments}}
+/**
+ * {{componentName}} - Image picker with camera and gallery options
+ * Handles permissions and provides image preview
+ */
+{{/if}}
+const {{componentName}} = ({{#if types}}{
+  onImageSelected,
+  aspectRatio = [4, 3],
+  allowsEditing = true,
+}: {{componentName}}Props{{/if}}{{#unless types}}{
+  onImageSelected,
+  aspectRatio = [4, 3],
+  allowsEditing = true,
+}{{/unless}}) => {
+  const [image, setImage] = useState{{#if types}}<ImageAsset | null>{{/if}}(null);
+
+  const requestPermission = async (type{{#if types}}: 'camera' | 'gallery'{{/if}}) => {
+    if (type === 'camera') {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      return status === 'granted';
+    } else {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      return status === 'granted';
+    }
+  };
+
+  const pickImage = async (useCamera{{#if types}}: boolean{{/if}} = false) => {
+    const permissionType = useCamera ? 'camera' : 'gallery';
+    const hasPermission = await requestPermission(permissionType);
+
+    if (!hasPermission) {
+      Alert.alert(
+        'Permission Required',
+        \`Please grant \${permissionType} permission to continue.\`
+      );
+      return;
+    }
+
+    const options{{#if types}}: ImagePicker.ImagePickerOptions{{/if}} = {
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing,
+      aspect: aspectRatio,
+      quality: 0.8,
+    };
+
+    const result = useCamera
+      ? await ImagePicker.launchCameraAsync(options)
+      : await ImagePicker.launchImageLibraryAsync(options);
+
+    if (!result.canceled && result.assets[0]) {
+      const selectedImage = {
+        uri: result.assets[0].uri,
+        width: result.assets[0].width,
+        height: result.assets[0].height,
+        type: result.assets[0].type,
+      }{{#if types}} as ImageAsset{{/if}};
+
+      setImage(selectedImage);
+      onImageSelected?.(selectedImage);
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      {image ? (
+        <View style={styles.previewContainer}>
+          <Image source={{ uri: image.uri }} style={styles.preview} />
+          <TouchableOpacity
+            style={styles.removeButton}
+            onPress={() => setImage(null)}
+          >
+            <Text style={styles.removeButtonText}>✕</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={styles.placeholder}>
+          <Text style={styles.placeholderText}>No image selected</Text>
+        </View>
+      )}
+
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => pickImage(false)}
+        >
+          <Text style={styles.buttonText}>📷 Gallery</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => pickImage(true)}
+        >
+          <Text style={styles.buttonText}>📸 Camera</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    alignItems: 'center',
+    padding: 16,
+  },
+  previewContainer: {
+    position: 'relative',
+    marginBottom: 16,
+  },
+  preview: {
+    width: 250,
+    height: 250,
+    borderRadius: 12,
+  },
+  removeButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#ff3b30',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  placeholder: {
+    width: 250,
+    height: 250,
+    borderRadius: 12,
+    backgroundColor: '#f0f0f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: '#ddd',
+    borderStyle: 'dashed',
+  },
+  placeholderText: {
+    color: '#999',
+    fontSize: 16,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  button: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});
+
+export default {{componentName}};`,
+        dependencies: ['expo-image-picker'],
+        imports: ['ImagePicker'],
+        notes: [
+            'Requires expo-image-picker package',
+            'Always request permissions before accessing camera/gallery',
+            'Use quality option to control file size'
+        ]
+    },
 };
 
 /**

@@ -441,7 +441,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             throw new McpError(ErrorCode.InvalidParams, "Missing query");
         }
 
-        const libraries = [
+        const allLibraries = [
             { id: 'react-native', name: 'React Native', aliases: ['rn', 'react-native', 'reactnative'] },
             { id: 'expo', name: 'Expo', aliases: ['expo', 'expo-sdk'] },
             { id: 'react-navigation', name: 'React Navigation', aliases: ['navigation', 'react-navigation', 'nav'] },
@@ -452,15 +452,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             { id: 'react-native-skia', name: 'React Native Skia', aliases: ['skia', 'react-native-skia'] }
         ];
 
+        // Filter to only include enabled libraries
+        const libraries = allLibraries.filter(lib => docsManager.isLibraryEnabled(lib.id));
+
         const matches = libraries.filter(lib =>
             lib.aliases.some(alias => alias.includes(query) || query.includes(alias))
         );
 
         if (matches.length === 0) {
+            const availableLibraries = libraries.map(lib => lib.id).join(', ');
             return {
                 content: [{
                     type: "text",
-                    text: `❌ No library found matching: "${query}"\n\nAvailable: react-native, expo, react-navigation, ignite, react-native-reanimated, react-native-gesture-handler, react-native-mmkv, react-native-skia`
+                    text: `❌ No library found matching: "${query}"\n\nAvailable: ${availableLibraries}`
                 }]
             };
         }
@@ -489,6 +493,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
         // Check if semantic search is enabled
         if (!docsManager.isSemanticSearchEnabled()) {
+            // Check if it failed to initialize vs being disabled in config
+            if (docsManager.didEmbeddingsInitFail()) {
+                const errorMsg = docsManager.getEmbeddingsInitError();
+                return {
+                    content: [{
+                        type: "text",
+                        text: `⚠️ **Semantic Search Unavailable**\n\nSemantic search failed to initialize and is temporarily unavailable.\n\n**Error:** ${errorMsg || 'Unknown error during model initialization'}\n\n**Possible causes:**\n- Network issues downloading the embedding model\n- Insufficient memory to load the model\n- Missing dependencies (@huggingface/transformers)\n\n💡 **Alternative:** Use the \`search-docs\` tool for keyword-based topic listing, which remains fully functional.`
+                    }]
+                };
+            }
+            
             return {
                 content: [{
                     type: "text",

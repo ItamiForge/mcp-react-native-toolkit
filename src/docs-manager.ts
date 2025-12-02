@@ -7,7 +7,7 @@ import { chunker } from './chunker.js';
 import { Indexer } from './indexer.js';
 import { fetchDocsForVersion, docsExist, extractMajorVersion } from './docs-fetcher.js';
 import { configManager } from './config.js';
-import type { DocChunk, SemanticSearchResult, HybridSearchResult, Settings, VersionDiff, SymbolIndexEntry, ModifiedAPI } from './types.js';
+import type { DocChunk, SemanticSearchResult, HybridSearchResult, Settings, VersionDiff, SymbolIndexEntry, ModifiedAPI, DocSource } from './types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -149,6 +149,26 @@ export class DocsManager {
     }
 
     /**
+     * Gets only enabled documentation sources from configuration.
+     * Sources without an explicit enabled field default to true.
+     */
+    getEnabledSources(): DocSource[] {
+        return configManager.getEnabledSources();
+    }
+
+    /**
+     * Checks if a library is enabled in the configuration.
+     * Returns true if the library is not found in config (allows filesystem-only libraries).
+     */
+    isLibraryEnabled(libraryId: string): boolean {
+        const sources = configManager.getSources();
+        const source = sources.find(s => s.id === libraryId);
+        // If source not found in config, assume enabled (filesystem-only)
+        // If source found, check enabled flag (defaults to true)
+        return source ? source.enabled !== false : true;
+    }
+
+    /**
      * Gets documentation with chunking support
      */
     async getDocChunked(
@@ -212,7 +232,8 @@ export class DocsManager {
         }
 
         // Try nested paths (topic might include directory structure)
-        const topicPath = topic.replace(/-/g, '/');
+        // Use path.sep for cross-platform compatibility
+        const topicPath = topic.replace(/-/g, path.sep);
         docPath = path.join(this.basePath, library, version, `${topicPath}.md`);
         if (fs.existsSync(docPath)) {
             return docPath;
@@ -356,6 +377,22 @@ export class DocsManager {
      */
     isSemanticSearchEnabled(): boolean {
         return this.indexer.isSemanticSearchEnabled();
+    }
+
+    /**
+     * Checks if embeddings initialization failed
+     * @returns true if embeddings were enabled but failed to initialize
+     */
+    didEmbeddingsInitFail(): boolean {
+        return this.indexer.didEmbeddingsInitFail();
+    }
+
+    /**
+     * Gets the error message from embeddings initialization failure
+     * @returns error message or null if no failure occurred
+     */
+    getEmbeddingsInitError(): string | null {
+        return this.indexer.getEmbeddingsInitError();
     }
 
     /**

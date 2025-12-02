@@ -34,6 +34,7 @@ interface DocSource {
     branch: string;
     versions: string[];
     preprocessingRules?: PreprocessingRules;
+    enabled?: boolean;
 }
 
 interface PreprocessingRules {
@@ -285,15 +286,25 @@ async function main(): Promise<void> {
     console.log('║         Git Sparse Checkout • Bulk Downloads               ║');
     console.log('╚════════════════════════════════════════════════════════════╝');
     console.log('');
-    console.log(`📚 Sources: ${sources.map((s) => s.name).join(' • ')}`);
+
+    // Filter sources to only include enabled ones (enabled !== false)
+    const enabledSources = sources.filter(source => source.enabled !== false);
+    const disabledSources = sources.filter(source => source.enabled === false);
+
+    // Log skipped sources
+    if (disabledSources.length > 0) {
+        console.log(`⏭️  Skipped (disabled): ${disabledSources.map((s) => s.name).join(' • ')}`);
+    }
+
+    console.log(`📚 Sources: ${enabledSources.map((s) => s.name).join(' • ')}`);
     console.log('─'.repeat(62));
 
     // Ensure directories exist
     ensureDir(DOCS_ROOT);
     ensureDir(TEMP_DIR);
 
-    // Fetch all sources in parallel
-    const results = await Promise.all(sources.map((source) => fetchWithSparseCheckout(source)));
+    // Fetch all enabled sources in parallel
+    const results = await Promise.all(enabledSources.map((source) => fetchWithSparseCheckout(source)));
 
     // Cleanup temp directory
     removeDir(TEMP_DIR);
@@ -321,7 +332,10 @@ async function main(): Promise<void> {
     }
 
     console.log('─'.repeat(62));
-    console.log(`✨ Total: ${totalFiles} files from ${successCount}/${sources.length} sources in ${totalTime}s`);
+    console.log(`✨ Total: ${totalFiles} files from ${successCount}/${enabledSources.length} sources in ${totalTime}s`);
+    if (disabledSources.length > 0) {
+        console.log(`⏭️  Skipped: ${disabledSources.length} disabled source(s)`);
+    }
     console.log('═'.repeat(62));
     console.log('');
 }

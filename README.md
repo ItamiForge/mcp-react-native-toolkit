@@ -2,27 +2,13 @@
 
 A Model Context Protocol (MCP) server that provides AI agents with accurate, version-aware documentation for React Native, Expo, React Navigation, and Ignite.
 
-## Why This Exists
-
-AI coding assistants often hallucinate React Native APIs or suggest outdated patterns. This toolkit solves that by:
-
-- **Version Awareness**: Automatically detects your project's dependency versions and serves matching documentation
-- **🔍 Semantic Search**: AI-powered documentation search using embeddings to find conceptually similar content beyond keyword matching
-- **Token Efficiency**: Smart chunking and pagination prevents context window overflow
-- **Fast Validation**: Validates API symbols against your actual `node_modules` before suggesting code
-- **Best Practices**: Curated performance tips to prevent common anti-patterns
-
 ## Quick Start
-
-### 1. Install
 
 ```bash
 git clone https://github.com/ItamiForge/mcp-react-native-toolkit.git
 cd mcp-react-native-toolkit
 npm install && npm run build
 ```
-
-### 2. Configure Your Editor
 
 #### vscode
 
@@ -140,15 +126,6 @@ mcp-react-native-toolkit/
         └── 7/            # If you have a v7 project
 ```
 
-### Version Detection
-
-| Dependency in package.json | Docs Version Fetched |
-|---------------------------|---------------------|
-| `"expo": "^52.0.0"` | `docs/expo/52/` from `sdk-52` branch |
-| `"expo": "~50.0.14"` | `docs/expo/50/` from `sdk-50` branch |
-| `"@react-navigation/native": "^7.1.0"` | `docs/react-navigation/7/` |
-| `"react-native": "0.73.0"` | `docs/react-native/latest/` (single version) |
-
 ## Commands Reference
 
 | Command | Purpose |
@@ -177,23 +154,6 @@ mcp-react-native-toolkit/
 | `compare-api-versions` | Compares API differences between library versions |
 | `suggest-migration-path` | Provides step-by-step migration guidance between versions |
 | `generate-ai-template` | Generates configuration files for AI coding assistants |
-
-### semantic-search-docs
-
-Performs semantic search across documentation using AI embeddings to find conceptually similar content, even when exact keywords don't match.
-
-**Parameters:**
-- `query` (required): Natural language search query
-- `library` (optional): Filter to specific library
-- `version` (optional): Version string or 'auto'
-- `topK` (optional): Number of results (1-50, default 10)
-- `searchMode` (optional): 'semantic' or 'hybrid' (default)
-
-**Example:**
-```
-"How do I optimize list performance in React Native?"
-```
-This query will find FlatList optimization documentation even without using the exact term "FlatList".
 
 ### generate-component-scaffold
 
@@ -365,146 +325,7 @@ npm run generate-templates -- vscode-copilot --output-dir ./my-project
 npm run generate-templates -- --all --output-dir ./ai-configs
 ```
 
-## Supported Libraries
-
-| Library | Source | Enabled by Default |
-|---------|--------|-------------------|
-| React Native | [facebook/react-native-website](https://github.com/facebook/react-native-website) | ✅ Yes |
-| Expo | [expo/expo](https://github.com/expo/expo) | ✅ Yes |
-| React Navigation | [react-navigation/react-navigation.github.io](https://github.com/react-navigation/react-navigation.github.io) | ❌ No |
-| Ignite | [infinitered/ignite](https://github.com/infinitered/ignite) | ❌ No |
-| React Native Reanimated | [software-mansion/react-native-reanimated](https://github.com/software-mansion/react-native-reanimated) | ❌ No |
-| React Native Gesture Handler | [software-mansion/react-native-gesture-handler](https://github.com/software-mansion/react-native-gesture-handler) | ❌ No |
-| React Native MMKV | [mrousavy/react-native-mmkv](https://github.com/mrousavy/react-native-mmkv) | ❌ No |
-| React Native Skia | [Shopify/react-native-skia](https://github.com/Shopify/react-native-skia) | ❌ No |
-
-To enable additional libraries, set `"enabled": true` in `docs-sources.json`.
-
 See [`examples/custom-source.md`](examples/custom-source.md) to add your own documentation sources.
-
-## How It Works
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│                     Your React Native App                   │
-│                   package.json: expo@52.0.0                 │
-└─────────────────────────┬───────────────────────────────────┘
-                          │ AI asks about Expo
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│                  MCP React Native Toolkit                   │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
-│  │   Context   │  │    Docs     │  │   On-Demand         │ │
-│  │  Detector   │  │   Manager   │  │     Fetcher         │ │
-│  │             │  │             │  │                     │ │
-│  │ Detects     │  │ Chunks and  │  │ Fetches SDK 52 docs │ │
-│  │ expo@52.0.0 │  │ serves docs │  │ from git if needed  │ │
-│  └─────────────┘  └─────────────┘  └─────────────────────┘ │
-│                          │                                  │
-│                          ▼                                  │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │                 Version-Specific Docs                 │  │
-│  │   docs/expo/52/  •  docs/react-native/latest/        │  │
-│  │   (fetched once, cached locally)                      │  │
-│  └──────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**Version Strategies by Library:**
-
-| Library | Strategy | Example |
-|---------|----------|---------|
-| Expo | SDK branches | `expo@52.0.0` → `sdk-52` branch |
-| React Navigation | Versioned folders | `@react-navigation/native@7.x` → `version-7.x/` |
-| React Native | Latest only | Always fetches current docs |
-| Ignite | Latest only | Always fetches current docs |
-
-## Project Structure
-
-```text
-mcp-react-native-toolkit/
-├── src/                    # TypeScript source code
-│   ├── index.ts            # MCP server entry point
-│   ├── docs-manager.ts     # Documentation retrieval and chunking
-│   ├── docs-fetcher.ts     # On-demand version-specific fetching
-│   ├── indexer.ts          # Symbol and example indexing
-│   ├── chunker.ts          # Token-efficient content splitting
-│   ├── context-detector.ts # Project dependency detection
-│   ├── node-modules-parser.ts # .d.ts file parsing
-│   ├── semver-resolver.ts  # Version matching logic
-│   ├── config.ts           # Configuration management
-│   └── types.ts            # TypeScript type definitions
-├── docs/                   # Cached documentation (auto-generated)
-├── scripts/                # Utility scripts
-│   ├── fetch-docs.ts       # Bulk documentation fetcher
-│   └── optimize-docs.ts    # Token optimization
-├── templates/              # Agent instruction templates
-├── examples/               # Integration examples
-└── bin/                    # CLI utilities
-```
-
-## Configuration
-
-Documentation sources are configured in `docs-sources.json`:
-
-```json
-{
-  "sources": [
-    {
-      "id": "expo",
-      "name": "Expo",
-      "repo": "https://github.com/expo/expo.git",
-      "docsPath": "docs/pages",
-      "branch": "main",
-      "versionStrategy": "sdk-branch",
-      "versionBranchPattern": "sdk-{major}"
-    }
-  ],
-  "settings": {
-    "semanticSearchEnabled": true,
-    "embeddingModel": "Xenova/all-MiniLM-L6-v2",
-    "vectorIndexPath": "./docs/.vector-index",
-    "embeddingBatchSize": 32
-  }
-}
-```
-
-### Semantic Search Settings
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `semanticSearchEnabled` | `true` | Enable/disable semantic search with embeddings |
-| `embeddingModel` | `Xenova/all-MiniLM-L6-v2` | Hugging Face model for generating embeddings |
-| `vectorIndexPath` | `./docs/.vector-index` | Path to store the vector index |
-| `embeddingBatchSize` | `32` | Batch size for embedding generation |
-
-## Semantic Search
-
-The toolkit includes AI-powered semantic search that finds relevant documentation based on meaning, not just keywords.
-
-### How It Works
-
-1. **Embedding Generation**: When documentation is indexed, each chunk is converted to a 384-dimensional vector using the all-MiniLM-L6-v2 model
-2. **Vector Storage**: Embeddings are stored locally using Vectra for efficient similarity search
-3. **Query Processing**: Your search query is converted to the same vector space
-4. **Similarity Matching**: The most similar documentation chunks are returned
-
-### Search Modes
-
-- **Semantic**: Uses only embedding similarity (best for conceptual queries)
-- **Hybrid** (default): Combines keyword matching (40%) with semantic similarity (60%)
-
-### When to Use Semantic Search
-
-- Finding documentation without knowing exact API names
-- Searching for concepts ("how to handle gestures" → gesture handler docs)
-- Discovering related functionality across libraries
-
-### Performance Notes
-
-- First-time model loading takes ~10-30 seconds (model is cached locally)
-- Vector index is generated on first run and cached in `docs/.vector-index/`
-- Subsequent searches are fast (<100ms)
 
 ## Examples
 

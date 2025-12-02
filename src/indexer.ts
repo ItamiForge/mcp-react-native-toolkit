@@ -15,6 +15,9 @@ export class Indexer {
     private embeddingsEnabled: boolean;
     private embeddingBatchSize: number;
     private embeddingsReady: boolean = false;
+    // Track if embeddings failed to initialize (for informative error messages)
+    private embeddingsInitFailed: boolean = false;
+    private embeddingsInitError: string | null = null;
     // Mapping from symbol to chunk IDs for hybrid search
     private symbolToChunkIds: Map<string, string[]> = new Map();
     // Embedding and vector store instances (created based on settings)
@@ -93,8 +96,12 @@ export class Indexer {
         const embeddingsStartTime = Date.now();
         
         try {
-            // Initialize vector store
+            // Initialize vector store - this may fail if storage is unavailable
             await this.vectorStore.initialize();
+            
+            // Initialize embedding generator - this loads the ML model and may fail
+            // if the model cannot be downloaded or loaded
+            await this.embeddingGenerator.initialize();
             
             // Collect all chunks first
             interface ChunkData {
@@ -122,7 +129,8 @@ export class Indexer {
                     try {
                         const content = fs.readFileSync(file, 'utf-8');
                         const relativePath = path.relative(versionPath, file);
-                        const topic = relativePath.replace(/\.md$/, '').replace(/\//g, '-');
+                        // Handle both forward and backward slashes for cross-platform compatibility
+                        const topic = relativePath.replace(/\.md$/, '').replace(/[/\\]/g, '-');
                         
                         // Generate chunks for this file
                         const chunks = chunker.chunk(content, library, version, topic);
@@ -190,9 +198,16 @@ export class Indexer {
             console.log(`Embeddings generated: ${allChunkEmbeddings.length} chunks in ${embeddingsDuration}ms`);
             console.log(`- Embeddings in index: ${this.index.embeddings.size}`);
         } catch (error) {
-            console.error('Failed to generate embeddings:', error);
-            // Continue without embeddings - semantic search will be unavailable
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Failed to initialize embeddings:', error);
+            console.warn('⚠️ Semantic search will be unavailable. Falling back to keyword-based search.');
+            console.warn('💡 This may be due to: network issues downloading the model, insufficient memory, or missing dependencies.');
+            
+            // Disable embeddings and mark initialization as failed
+            this.embeddingsEnabled = false;
             this.embeddingsReady = false;
+            this.embeddingsInitFailed = true;
+            this.embeddingsInitError = errorMessage;
         }
     }
     
@@ -253,6 +268,22 @@ export class Indexer {
     }
 
     /**
+     * Check if embeddings initialization failed
+     * This is different from disabled - it means embeddings were enabled but failed to load
+     */
+    didEmbeddingsInitFail(): boolean {
+        return this.embeddingsInitFailed;
+    }
+
+    /**
+     * Get the error message from embeddings initialization failure
+     * Returns null if no failure occurred
+     */
+    getEmbeddingsInitError(): string | null {
+        return this.embeddingsInitError;
+    }
+
+    /**
      * Indexes a single library
      */
     private async indexLibrary(library: string): Promise<void> {
@@ -281,7 +312,8 @@ export class Indexer {
 
         for (const file of markdownFiles) {
             const relativePath = path.relative(versionPath, file);
-            const topic = relativePath.replace(/\.md$/, '').replace(/\//g, '-');
+            // Handle both forward and backward slashes for cross-platform compatibility
+            const topic = relativePath.replace(/\.md$/, '').replace(/[/\\]/g, '-');
             topics.push(topic);
 
             try {
