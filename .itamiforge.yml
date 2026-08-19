@@ -1,0 +1,14 @@
+catalog: true
+slug: mcp-react-native-toolkit
+title: MCP React Native Toolkit
+summary: Local MCP server for React Native and Expo docs, tooling, and device automation.
+status: active
+category: library
+featured: false
+visibility: public
+tags:
+  - typescript
+  - mcp
+  - react-native
+  - expo
+install: npx mcp-react-native-toolkit

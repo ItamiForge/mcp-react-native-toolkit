@@ -2,6 +2,8 @@
 
 A Model Context Protocol (MCP) server that provides AI agents with accurate, version-aware documentation for React Native, Expo, React Navigation, and Ignite.
 
+> Catalog: [ItamiForge](https://itamiforge.github.io/itamiforge/docs/projects/#mcp-react-native-toolkit)
+
 ## Quick Start
 
 ```bash
